@@ -64,5 +64,3 @@ Model files (for example `yolov8l.pt`) are provided in the project root and in `
 ## License
 
 Add a license as appropriate for your project.
-# Object-Detection
-New Repo
