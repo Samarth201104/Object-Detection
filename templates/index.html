@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Object Detection Demo — Vanilla JS</title>
+  <meta name="description" content="Portfolio-ready UI/UX for an Object Detection demo. No ML inference, fully simulated.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <div class="bg fx-particles" aria-hidden="true"></div>
+
+  <header class="site-top" role="banner">
+    <a class="brand" href="#hero" aria-label="Go to top">
+      <span class="brand-mark" aria-hidden="true">◼︎</span>
+      <span class="brand-text">Object<span>Detect</span></span>
+    </a>
+
+    <nav class="top-actions" aria-label="Top actions">
+      <button id="themeToggle" class="btn ghost" aria-pressed="false" aria-label="Toggle light/dark mode" title="Toggle theme">
+        <svg class="icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4V2m0 20v-2m8-8h2M2 12h2m12.364 7.364 1.414 1.414M4.222 4.222 5.636 5.636m12.728 0 1.414-1.414M4.222 19.778 5.636 18.364" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        <svg class="icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+        <span class="sr-only">Theme</span>
+      </button>
+      <a class="btn small ghost" href="#how" aria-label="Skip to How It Works">How it works</a>
+    </nav>
+  </header>
+
+  <section id="hero" class="section hero" aria-labelledby="heroTitle">
+    <div class="container">
+      <div class="hero-inner reveal-up">
+        <h1 id="heroTitle">Object Detection Demo</h1>
+        <p class="hero-sub">Upload Image, Upload Video, or Open Webcam — detect objects with AI</p>
+        <div class="cta-row">
+          <button class="btn primary lg" data-mode="image" id="ctaImage">Upload Image</button>
+          <button class="btn primary lg" data-mode="video" id="ctaVideo">Upload Video</button>
+          <button class="btn primary lg" data-mode="webcam" id="ctaWebcam">Open Webcam</button>
+        </div>
+        <div class="scroll-indicator" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+    <svg class="divider" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,96 C360,0 1080,180 1440,60 L1440,120 L0,120 Z" class="wave"></path>
+    </svg>
+  </section>
+
+  <main id="panel" class="section panel" aria-labelledby="panelTitle">
+    <div class="container">
+      <h2 id="panelTitle" class="section-title reveal">Detection Panel</h2>
+      <p class="section-sub reveal">Fully simulated UI — bounding boxes, labels, downloads, and controls. No ML needed.</p>
+
+      <div class="panel-grid">
+        <div class="preview card glass reveal-left" aria-label="Preview area">
+          <div class="surface" id="dropZone" role="region" aria-label="Drop image/video here">
+            <canvas id="stage" width="1280" height="720" aria-label="Preview canvas"></canvas>
+            <video id="videoEl" class="hidden" playsinline controls></video>
+            <div class="surface-overlay" id="dropOverlay">
+              <div class="drop-msg">Drop files here</div>
+            </div>
+          </div>
+
+          <div class="preview-toolbar">
+            <div class="mode-tabs" role="tablist" aria-label="Input modes">
+              <button class="tab active" role="tab" aria-selected="true" id="tabImage" data-mode="image">Image</button>
+              <button class="tab" role="tab" aria-selected="false" id="tabVideo" data-mode="video">Video</button>
+              <button class="tab" role="tab" aria-selected="false" id="tabWebcam" data-mode="webcam">Webcam</button>
+            </div>
+
+            <div class="io-controls">
+              <label class="file-btn">
+                <input id="fileInput" type="file" accept="image/*,video/*" aria-label="Choose file" />
+                <span>Select File</span>
+              </label>
+              <button class="btn ghost" id="btnSnapshot" title="Snapshot current frame">Snapshot</button>
+              <span class="fps" id="fps">FPS: —</span>
+            </div>
+          </div>
+
+          <div class="preview-hint" id="previewHint">Tip: Drag & drop files anywhere on the preview.</div>
+        </div>
+
+        <aside class="controls card glass reveal-right" aria-label="Controls">
+          <h3 class="controls-title">Controls</h3>
+
+          <div class="control">
+            <label for="confRange">Confidence <span id="confValue">0.50</span></label>
+            <input type="range" id="confRange" min="0" max="1" step="0.01" value="0.5" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0.5" />
+          </div>
+
+          <div class="control">
+            <label for="maxDets">Max detections</label>
+            <input type="number" id="maxDets" min="1" max="100" value="10" />
+          </div>
+
+          <div class="control toggles">
+            <label class="switch">
+              <input type="checkbox" id="toggleBoxes" checked />
+              <span>Show Boxes</span>
+            </label>
+            <label class="switch">
+              <input type="checkbox" id="toggleLabels" checked />
+              <span>Show Labels</span>
+            </label>
+          </div>
+
+          <div class="control">
+            <div class="chip-label">Class filters</div>
+            <div class="chips" role="listbox" aria-label="Class filters (simulated)">
+              <button class="chip selected" data-class="person" aria-pressed="true">Person</button>
+              <button class="chip selected" data-class="car" aria-pressed="true">Car</button>
+              <button class="chip selected" data-class="bottle" aria-pressed="true">Bottle</button>
+              <button class="chip selected" data-class="dog" aria-pressed="true">Dog</button>
+              <button class="chip selected" data-class="phone" aria-pressed="true">Phone</button>
+            </div>
+          </div>
+
+          <div class="control run">
+            <button class="btn primary xl" id="runBtn">Run Detection (Simulate)</button>
+            <div class="progress" id="progress" aria-live="polite" aria-atomic="true" hidden>
+              <span class="spinner" aria-hidden="true"></span>
+              <span class="progress-text">Processing…</span>
+            </div>
+          </div>
+
+          <div class="control results">
+            <div class="result-pill"><strong>Detections:</strong> <span id="detCount">0</span></div>
+            <div class="result-actions">
+              <button class="btn ghost" id="btnDownloadPNG">Download Annotated PNG</button>
+              <button class="btn ghost" id="btnDownloadJSON">Download JSON</button>
+              <button class="btn ghost" id="btnCopy">Copy Results</button>
+            </div>
+            <p class="error" id="error" role="alert" hidden></p>
+          </div>
+
+          <details class="tip">
+            <summary>Tips</summary>
+            <ul>
+              <li>Use <kbd>Space</kbd> to toggle simulate.</li>
+              <li>Use <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> to switch Image/Video/Webcam.</li>
+              <li>Drag & drop to load files quickly.</li>
+            </ul>
+          </details>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <section id="how" class="section how" aria-labelledby="howTitle">
+    <div class="container">
+      <h2 id="howTitle" class="section-title reveal">How it works</h2>
+      <div class="steps-grid">
+        <article class="step card neu reveal-up" aria-label="Choose input">
+          <div class="icon-wrap" aria-hidden="true">📁</div>
+          <h3>1. Choose input</h3>
+          <p>Upload an <strong>image</strong>, select a <strong>video</strong>, or open your <strong>webcam</strong> (simulated).</p>
+        </article>
+        <article class="step card neu reveal-up" aria-label="Run detection">
+          <div class="icon-wrap" aria-hidden="true">🎯</div>
+          <h3>2. Run detection</h3>
+          <p>Click <em>Run Detection</em> to simulate bounding boxes and labels with your chosen settings.</p>
+        </article>
+        <article class="step card neu reveal-up" aria-label="Export results">
+          <div class="icon-wrap" aria-hidden="true">📦</div>
+          <h3>3. Export results</h3>
+          <p>Export <strong>annotated PNG</strong> or structured <strong>JSON</strong>, or copy to clipboard.</p>
+        </article>
+      </div>
+    </div>
+    <svg class="divider" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,60 C360,140 1080,-20 1440,60 L1440,120 L0,120 Z" class="wave"></path>
+    </svg>
+  </section>
+
+  <section id="demo" class="section demo" aria-labelledby="demoTitle">
+    <div class="container">
+      <div class="demo-wrap card glass reveal">
+        <div>
+          <h2 id="demoTitle" class="section-title">Instant Demo</h2>
+          <p>Preloaded sample. Click <em>Try Detection</em> to see simulated results.</p>
+          <button class="btn primary" id="btnDemo">Try Detection</button>
+        </div>
+        <img id="demoImg" alt="Sample scene for demo" />
+      </div>
+    </div>
+  </section>
+
+  <section id="about" class="section about" aria-labelledby="aboutTitle">
+    <div class="container">
+      <div class="about-card card neu reveal">
+        <h2 id="aboutTitle" class="section-title">About this project</h2>
+        <p><strong>Created by Samarth More — Final Year CSE (AI &amp; ML)</strong></p>
+        <p>This website demonstrates a polished UI for Object Detection. Model integration will be added later using <em>TensorFlow.js</em> or a <em>REST API</em>.</p>
+        <div class="badges" role="list" aria-label="Tech stack">
+          <span class="badge">HTML</span>
+          <span class="badge">CSS</span>
+          <span class="badge">JavaScript</span>
+        </div>
+        <button class="btn ghost" id="btnSummary">Download Project Summary</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="scope" class="section scope" aria-labelledby="scopeTitle">
+    <div class="container">
+      <h2 id="scopeTitle" class="section-title reveal">What’s next?</h2>
+      <div class="cards-grid">
+        <article class="card glass reveal-up"><h3>Real-time ML integration</h3><p>Plug a TF.js model or call a REST endpoint for live predictions.</p></article>
+        <article class="card glass reveal-up"><h3>Advanced class filtering</h3><p>Per-class thresholds, color maps, and instance masks.</p></article>
+        <article class="card glass reveal-up"><h3>Cloud API support</h3><p>Batch processing with signed uploads and webhooks.</p></article>
+        <article class="card glass reveal-up"><h3>Mobile-first optimizations</h3><p>Web workers, lazy decode, and power-friendly loops.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer" role="contentinfo">
+    <div class="container footer-inner">
+      <div class="copy">© <span id="year"></span> Samarth More — Final Year CSE (AI &amp; ML)</div>
+      <div class="socials" aria-label="Social links">
+        <a class="icon-link" href="https://github.com/" target="_blank" rel="noreferrer noopener" aria-label="GitHub">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 .5a12 12 0 0 0-3.79 23.4c.6.11.82-.26.82-.58v-2.02c-3.34.73-4.04-1.61-4.04-1.61-.55-1.4-1.34-1.77-1.34-1.77-1.1-.76.08-.75.08-.75 1.22.09 1.86 1.25 1.86 1.25 1.08 1.85 2.83 1.31 3.52 1.01.11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.17 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.65.25 2.87.12 3.17.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22V23.3c0 .32.22.69.82.58A12 12 0 0 0 12 .5Z"/></svg>
+        </a>
+        <a class="icon-link" href="https://www.linkedin.com/" target="_blank" rel="noreferrer noopener" aria-label="LinkedIn">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19 3A2.94 2.94 0 0 1 22 6v12a2.94 2.94 0 0 1-3 3H5a2.94 2.94 0 0 1-3-3V6a2.94 2.94 0 0 1 3-3h14M8 17v-7H5v7h3m-1.5-8.2A1.8 1.8 0 1 0 4.7 7a1.8 1.8 0 0 0 1.8 1.8M20 17v-4.4C20 10 19 9 17.6 9A2.6 2.6 0 0 0 15 10.4V10H12v7h3v-3.9c0-1 .2-2 1.6-2s1.4 1.2 1.4 2.1V17Z"/></svg>
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
